@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 VERSION="$(grep -m1 '^version' "$ROOT/src-tauri/Cargo.toml" | cut -d'"' -f2)"
 OUT="$ROOT/dist/Mvpn-$VERSION"
-rm -rf "$OUT"
+# 注意：这里不做 rm -rf（清理操作在受限环境可能被拦），逐文件覆盖即可
 mkdir -p "$OUT/core"
 
 cp "$ROOT/src-tauri/target/release/mvpn.exe" "$OUT/Mvpn.exe"

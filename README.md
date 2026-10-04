@@ -102,9 +102,26 @@ MVP_CORE=/path/to/sing-box.exe ./src-tauri/target/release/mvpn.exe --monitortest
 ```
 
 仓库里附带 `latest.json` 模板，配合 GitHub Releases 即可用。
+本项目已发布 v0.2.0，清单地址为：
+
+```
+https://github.com/tmclsamxy/Mvpn/releases/latest/download/latest.json
+```
+
+（这是 GitHub 的稳定地址，永远指向最新 Release 的同名资源，把它填进客户端设置即可长期使用。）
+
 更新流程：检查版本 → 提示 → 下载 zip 并解出 exe → 停止内核 →
 把运行中的 exe 重命名为 `.old`（Windows 允许）→ 换入新 exe → 清理 → 重启。
 若替换被安全软件拦截，会把新版本留在同目录并提示路径，不会破坏现有安装。
+
+### 自己发一个新版本
+
+```bash
+MVPN_REPO=tmclsamxy/Mvpn GH_TOKEN=xxx ./scripts/publish.sh 0.3.0
+```
+
+一条命令完成：构建 → 打 zip → 生成 `latest.json` → 创建 Release → 上传两个资产。
+客户端把清单地址指向 `releases/latest/download/latest.json` 后就会自动发现新版本。
 
 ## 使用
 

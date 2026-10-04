@@ -1,5 +1,5 @@
 {
   "version": "0.2.0",
-  "notes": "新增：右上角实时流量修复、今日/历史/分节点流量统计、主页实时连接列表、客户端自身更新",
-  "url": "https://github.com/<owner>/<repo>/releases/download/v0.2.0/Mvpn-0.2.0-win-x64.zip"
+  "notes": "修复右上角实时流量恒为 0；新增今日/历史/分节点流量统计、概览页实时连接列表、客户端自身更新",
+  "url": "https://github.com/tmclsamxy/Mvpn/releases/download/v0.2.0/Mvpn-0.2.0-win-x64.zip"
 }

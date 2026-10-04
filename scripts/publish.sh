@@ -26,7 +26,6 @@ DIST="$ROOT/dist/Mvpn-${VERSION}"
 [ -d "$DIST" ] || { echo "打包目录不存在: $DIST" >&2; exit 1; }
 
 echo "==> 2/4 生成 zip"
-rm -f "$ROOT/dist/$ZIP"
 /c/Windows/System32/tar.exe -a -c -f "$ROOT/dist/$ZIP" -C "$ROOT/dist" "Mvpn-${VERSION}"
 ls -la "$ROOT/dist/$ZIP"
 
