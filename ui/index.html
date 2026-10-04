@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mvpn</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">M</div>
+      <div class="brand-txt">
+        <div class="brand-name">Mvpn</div>
+        <div class="brand-sub" id="coreVersion">sing-box</div>
+      </div>
+    </div>
+
+    <div class="topbar-mid">
+      <div class="status-pill" id="statusPill">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">已停止</span>
+      </div>
+      <div class="segmented" id="modeSwitch">
+        <button data-mode="rule" class="active">规则</button>
+        <button data-mode="global">全局</button>
+        <button data-mode="direct">直连</button>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="traffic">
+        <span class="tr-up" id="trUp">↑ 0 B/s</span>
+        <span class="tr-down" id="trDown">↓ 0 B/s</span>
+      </div>
+      <button class="btn primary" id="btnToggle">启动</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- 侧栏 -->
+    <nav class="sidebar">
+      <button class="nav-item active" data-page="overview"><i>◈</i>概览</button>
+      <button class="nav-item" data-page="nodes"><i>☰</i>节点</button>
+      <button class="nav-item" data-page="subs"><i>⇅</i>订阅</button>
+      <button class="nav-item" data-page="rules"><i>⚖</i>分流</button>
+      <button class="nav-item" data-page="traffic"><i>▤</i>流量</button>
+      <button class="nav-item" data-page="settings"><i>⚙</i>设置</button>
+      <button class="nav-item" data-page="logs"><i>≣</i>日志</button>
+    </nav>
+
+    <!-- 内容区 -->
+    <main class="content">
+
+      <!-- ============ 概览 ============ -->
+      <section class="page active" id="page-overview">
+        <div class="grid">
+          <div class="card span2">
+            <div class="card-title">当前节点</div>
+            <div class="node-pick">
+              <select id="activeNode"></select>
+              <button class="btn ghost" id="btnQuickTest">测延迟</button>
+            </div>
+            <div class="node-meta" id="activeNodeMeta">未选择</div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">运行状态</div>
+            <div class="kv"><span>内核</span><b id="ovCore">-</b></div>
+            <div class="kv"><span>入站</span><b id="ovInbound">-</b></div>
+            <div class="kv"><span>运行时长</span><b id="ovUptime">-</b></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">快捷开关</div>
+            <label class="switch-row">
+              <span>系统代理</span>
+              <input type="checkbox" id="swSysProxy" class="sw" /><i class="sw-ui"></i>
+            </label>
+            <label class="switch-row">
+              <span>TUN 模式</span>
+              <input type="checkbox" id="swTun" class="sw" /><i class="sw-ui"></i>
+            </label>
+            <label class="switch-row">
+              <span>局域网共享</span>
+              <input type="checkbox" id="swLan" class="sw" /><i class="sw-ui"></i>
+            </label>
+          </div>
+
+          <div class="card span2">
+            <div class="card-title">代理地址</div>
+            <div class="proxy-box">
+              <div class="proxy-line">
+                <span class="tag">HTTP / SOCKS</span>
+                <code id="mixedAddr">127.0.0.1:2080</code>
+                <button class="btn tiny" data-copy="mixedAddr">复制</button>
+              </div>
+              <div class="hint" id="lanHint"></div>
+            </div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-title">出口模式</div>
+            <div class="hint" id="modeHint"></div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-title">流量统计</div>
+            <div class="stat-row">
+              <div><div class="stat-num down" id="ovTodayDown">0 B</div><div class="stat-lbl">今日下载</div></div>
+              <div><div class="stat-num up" id="ovTodayUp">0 B</div><div class="stat-lbl">今日上传</div></div>
+              <div><div class="stat-num" id="ovTotalDown">0 B</div><div class="stat-lbl">历史累计下载</div></div>
+              <div><div class="stat-num" id="ovTotalUp">0 B</div><div class="stat-lbl">历史累计上传</div></div>
+            </div>
+          </div>
+
+          <div class="card span2">
+            <div class="card-title">实时连接 <span class="hint" style="text-transform:none;font-weight:400">（正在经过代理的流量）</span></div>
+            <div class="table-wrap conn-wrap">
+              <table class="tbl conn-tbl">
+                <thead><tr>
+                  <th>目标</th><th style="width:64px">端口</th><th style="width:70px">协议</th>
+                  <th style="width:150px">链路</th><th style="width:80px">下载</th><th style="width:80px">上传</th>
+                </tr></thead>
+                <tbody id="connBody"></tbody>
+              </table>
+              <div class="empty" id="connEmpty">暂无连接 —— 启动内核并让应用走 127.0.0.1:2080 后这里会实时显示</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 节点 ============ -->
+      <section class="page" id="page-nodes">
+        <div class="toolbar">
+          <button class="btn primary" id="btnAddNode">＋ 添加节点</button>
+          <button class="btn" id="btnImportClipboard">从剪贴板导入</button>
+          <button class="btn" id="btnTestAll">批量测速</button>
+          <div class="spacer"></div>
+          <input class="search" id="nodeSearch" placeholder="搜索节点…" />
+          <button class="btn danger ghost" id="btnDelNodes">删除选中</button>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl" id="nodeTable">
+            <thead>
+              <tr>
+                <th style="width:34px"><input type="checkbox" id="chkAllNodes" /></th>
+                <th>名称</th><th style="width:96px">协议</th><th>服务器</th>
+                <th style="width:70px">端口</th><th style="width:80px">延迟</th>
+                <th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="nodeBody"></tbody>
+          </table>
+          <div class="empty" id="nodeEmpty">还没有节点，点「添加节点」或「从剪贴板导入」</div>
+        </div>
+      </section>
+
+      <!-- ============ 订阅 ============ -->
+      <section class="page" id="page-subs">
+        <div class="toolbar">
+          <button class="btn primary" id="btnAddSub">＋ 添加订阅</button>
+          <button class="btn" id="btnUpdateAllSubs">全部更新</button>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr><th>名称</th><th>地址</th><th style="width:80px">节点数</th>
+              <th style="width:150px">最后更新</th><th style="width:130px">操作</th></tr>
+            </thead>
+            <tbody id="subBody"></tbody>
+          </table>
+          <div class="empty" id="subEmpty">还没有订阅</div>
+        </div>
+      </section>
+
+      <!-- ============ 分流 ============ -->
+      <section class="page" id="page-rules">
+        <div class="toolbar">
+          <button class="btn primary" id="btnAddRule">＋ 添加规则</button>
+          <label class="chk"><input type="checkbox" id="cnDirect" /> 中国大陆域名/IP 直连（内置规则集）</label>
+          <label class="chk"><span>规则集源</span>
+            <select id="rulesetSource">
+              <option value="jsdelivr">jsDelivr CDN（推荐）</option>
+              <option value="github">GitHub 官方</option>
+            </select>
+          </label>
+          <div class="spacer"></div>
+          <button class="btn" id="btnManageRuleSet">规则集</button>
+        </div>
+        <div class="hint bar-hint">规则从上到下依次匹配，命中即执行对应动作；未命中的走「默认出站」。</div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr><th style="width:44px">启用</th><th style="width:170px">备注</th>
+              <th>匹配条件</th><th style="width:150px">动作</th><th style="width:140px">操作</th></tr>
+            </thead>
+            <tbody id="ruleBody"></tbody>
+          </table>
+          <div class="empty" id="ruleEmpty">还没有自定义规则</div>
+        </div>
+      </section>
+
+      <!-- ============ 流量 ============ -->
+      <section class="page" id="page-traffic">
+        <div class="toolbar">
+          <button class="btn" id="btnRefreshTraffic">刷新</button>
+          <label class="chk"><input type="checkbox" id="trafficAuto" checked /> 每 3 秒自动刷新</label>
+          <div class="spacer"></div>
+          <span class="hint" id="trafficUpdated"></span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">今日</div>
+            <div class="big-stat"><b class="down" id="trTodayDown">0 B</b><span>下载</span></div>
+            <div class="big-stat"><b class="up" id="trTodayUp">0 B</b><span>上传</span></div>
+            <div class="big-stat"><b id="trTodayTotal">0 B</b><span>合计</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title">历史累计（保留 90 天）</div>
+            <div class="big-stat"><b class="down" id="trLifeDown">0 B</b><span>下载</span></div>
+            <div class="big-stat"><b class="up" id="trLifeUp">0 B</b><span>上传</span></div>
+            <div class="big-stat"><b id="trLifeTotal">0 B</b><span>合计</span></div>
+          </div>
+          <div class="card span2">
+            <div class="card-title">近 7 天</div>
+            <div class="bars" id="trBars"></div>
+          </div>
+          <div class="card span2">
+            <div class="card-title">分节点累计消耗</div>
+            <div class="table-wrap">
+              <table class="tbl">
+                <thead><tr><th>节点</th><th style="width:110px">下载</th><th style="width:110px">上传</th><th style="width:110px">合计</th><th style="width:130px">占比</th></tr></thead>
+                <tbody id="trNodeBody"></tbody>
+              </table>
+              <div class="empty" id="trNodeEmpty">还没有流量记录</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 设置 ============ -->
+      <section class="page" id="page-settings">
+        <div class="settings-grid">
+
+          <div class="card">
+            <div class="card-title">本地 / 局域网代理</div>
+            <label class="fld"><span>启用系统代理（开机即生效）</span><input type="checkbox" id="setSysProxy" class="sw" /></label>
+            <label class="fld"><span>启用混合入站</span><input type="checkbox" id="setMixedEnabled" class="sw" /></label>
+            <label class="fld"><span>监听端口</span><input type="number" id="setMixedPort" min="1" max="65535" /></label>
+            <label class="fld"><span>允许局域网连接</span><input type="checkbox" id="setLan" class="sw" /></label>
+            <label class="fld"><span>用户名密码认证</span><input type="checkbox" id="setMixedAuth" class="sw" /></label>
+            <label class="fld"><span>用户名</span><input type="text" id="setMixedUser" /></label>
+            <label class="fld"><span>密码</span><input type="text" id="setMixedPass" /></label>
+          </div>
+
+          <div class="card">
+            <div class="card-title">TUN 模式</div>
+            <label class="fld"><span>启用 TUN</span><input type="checkbox" id="setTun" class="sw" /></label>
+            <label class="fld"><span>协议栈</span>
+              <select id="setTunStack"><option value="mixed">mixed（推荐）</option>
+              <option value="gvisor">gvisor</option><option value="system">system</option></select>
+            </label>
+            <label class="fld"><span>MTU</span><input type="number" id="setTunMtu" min="1280" max="9000" /></label>
+            <label class="fld"><span>自动路由</span><input type="checkbox" id="setTunAuto" class="sw" /></label>
+            <label class="fld"><span>严格路由</span><input type="checkbox" id="setTunStrict" class="sw" /></label>
+            <div class="hint" id="tunHint"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">DNS</div>
+            <label class="fld"><span>国内 DNS</span><input type="text" id="setDnsLocal" placeholder="223.5.5.5" /></label>
+            <label class="fld"><span>远程 DNS</span><input type="text" id="setDnsRemote" placeholder="https://1.1.1.1/dns-query" /></label>
+            <label class="fld"><span>解析策略</span>
+              <select id="setDnsStrategy">
+                <option value="prefer_ipv4">prefer_ipv4</option>
+                <option value="prefer_ipv6">prefer_ipv6</option>
+                <option value="ipv4_only">ipv4_only</option>
+                <option value="ipv6_only">ipv6_only</option>
+              </select>
+            </label>
+            <label class="fld"><span>国内域名用国内 DNS</span><input type="checkbox" id="setDnsCn" class="sw" /></label>
+          </div>
+
+          <div class="card">
+            <div class="card-title">内核</div>
+            <div class="kv"><span>当前版本</span><b id="setCoreVer">-</b></div>
+            <label class="fld"><span>内核路径</span><input type="text" id="setCorePath" placeholder="留空自动查找" /></label>
+            <div class="row-btns">
+              <button class="btn" id="btnCheckUpdate">检查更新</button>
+              <button class="btn" id="btnDownloadCore">下载 / 更新内核</button>
+            </div>
+            <div class="kv"><span>Clash API</span><span id="setClashAddr">-</span></div>
+            <label class="fld"><span>API 端口</span><input type="number" id="setClashPort" /></label>
+          </div>
+
+          <div class="card">
+            <div class="card-title">启动与外观</div>
+            <label class="fld"><span>开机自启</span><input type="checkbox" id="setAutostart" class="sw" /></label>
+            <label class="fld"><span>启动时静默（最小化到托盘）</span><input type="checkbox" id="setStartMin" class="sw" /></label>
+            <label class="fld"><span>启动时自动连接</span><input type="checkbox" id="setAutoConn" class="sw" /></label>
+            <label class="fld"><span>日志级别</span>
+              <select id="setLogLevel"><option>trace</option><option>debug</option>
+              <option selected>info</option><option>warn</option><option>error</option></select>
+            </label>
+          </div>
+
+          <div class="card">
+            <div class="card-title">客户端更新</div>
+            <div class="kv"><span>当前版本</span><b id="setAppVer">-</b></div>
+            <div id="updBanner" class="upd-banner" style="display:none">
+              <span id="updText"></span>
+              <button class="btn tiny primary" id="btnDoUpdate">立即更新</button>
+            </div>
+            <label class="fld"><span>版本清单地址</span></label>
+            <input type="text" id="setUpdUrl" placeholder="https://.../latest.json" style="width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12px" />
+            <div class="hint" style="margin-top:6px">
+              清单格式：<code>{"version":"0.2.0","notes":"...","url":"https://.../Mvpn-0.2.0-win-x64.zip"}</code><br />
+              留空则不检查更新。更新前会自动停止内核。
+            </div>
+            <label class="fld" style="margin-top:8px"><span>启动时自动检查</span><input type="checkbox" id="setAutoUpd" class="sw" /></label>
+            <div class="row-btns">
+              <button class="btn" id="btnCheckAppUpd">检查客户端更新</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">高级</div>
+            <label class="fld"><span>系统代理绕过列表</span></label>
+            <textarea id="setBypass" rows="3"></textarea>
+            <div class="row-btns">
+              <button class="btn" id="btnPreviewConfig">查看生成的配置</button>
+              <button class="btn" id="btnOpenData">打开数据目录</button>
+              <button class="btn" id="btnOpenLog">打开日志文件</button>
+            </div>
+            <div class="row-btns">
+              <button class="btn" id="btnRestart">重启内核</button>
+              <button class="btn danger" id="btnReset">恢复默认设置</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 日志 ============ -->
+      <section class="page" id="page-logs">
+        <div class="toolbar">
+          <button class="btn" id="btnClearLog">清空</button>
+          <label class="chk"><input type="checkbox" id="logAutoScroll" checked /> 自动滚动</label>
+          <div class="spacer"></div>
+          <span class="hint" id="logCount"></span>
+        </div>
+        <pre class="logbox" id="logBox"></pre>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <span id="sbLeft">就绪</span>
+    <span class="spacer"></span>
+    <span id="sbProxy"></span>
+    <span id="sbAdmin"></span>
+    <span id="sbData"></span>
+  </footer>
+</div>
+
+<!-- 节点编辑弹窗 -->
+<div class="modal-mask" id="nodeModal">
+  <div class="modal wide">
+    <div class="modal-head"><b id="nodeModalTitle">添加节点</b><button class="x" data-close="nodeModal">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="fld"><span>名称</span><input id="f_name" /></label>
+        <label class="fld"><span>协议</span>
+          <select id="f_protocol">
+            <option value="vless">VLESS</option><option value="vmess">VMess</option>
+            <option value="trojan">Trojan</option><option value="shadowsocks">Shadowsocks</option>
+            <option value="hysteria2">Hysteria2</option><option value="tuic">TUIC</option>
+          </select>
+        </label>
+        <label class="fld"><span>服务器</span><input id="f_server" placeholder="域名或 IP" /></label>
+        <label class="fld"><span>端口</span><input id="f_port" type="number" /></label>
+        <label class="fld" data-p="vless,vmess,tuic"><span>UUID</span><input id="f_uuid" /></label>
+        <label class="fld" data-p="vless"><span>Flow</span>
+          <select id="f_flow"><option value="">无</option><option value="xtls-rprx-vision">xtls-rprx-vision</option></select>
+        </label>
+        <label class="fld" data-p="vmess"><span>Alter ID</span><input id="f_aid" type="number" value="0" /></label>
+        <label class="fld" data-p="vmess"><span>加密</span>
+          <select id="f_security"><option>auto</option><option>none</option><option>zero</option>
+          <option>aes-128-gcm</option><option>chacha20-poly1305</option></select>
+        </label>
+        <label class="fld" data-p="trojan,shadowsocks,hysteria2,tuic"><span>密码</span><input id="f_password" /></label>
+        <label class="fld" data-p="shadowsocks"><span>加密方式</span><input id="f_method" placeholder="aes-256-gcm / 2022-blake3-aes-128-gcm" /></label>
+        <label class="fld" data-p="hysteria2"><span>混淆类型</span><input id="f_obfs" placeholder="salamander，可留空" /></label>
+        <label class="fld" data-p="hysteria2"><span>混淆密码</span><input id="f_obfspw" /></label>
+        <label class="fld" data-p="hysteria2"><span>上行 Mbps</span><input id="f_up" type="number" /></label>
+        <label class="fld" data-p="hysteria2"><span>下行 Mbps</span><input id="f_down" type="number" /></label>
+        <label class="fld" data-p="tuic"><span>拥塞控制</span>
+          <select id="f_cc"><option value="bbr">bbr</option><option value="cubic">cubic</option><option value="new_reno">new_reno</option></select>
+        </label>
+        <label class="fld"><span>传输方式</span>
+          <select id="f_transport"><option value="tcp">tcp</option><option value="ws">websocket</option>
+          <option value="grpc">gRPC</option><option value="http">HTTP/2</option><option value="quic">QUIC</option></select>
+        </label>
+        <label class="fld" data-t="ws,http"><span>路径</span><input id="f_wspath" placeholder="/" /></label>
+        <label class="fld" data-t="ws,http"><span>Host</span><input id="f_wshost" /></label>
+        <label class="fld" data-t="grpc"><span>serviceName</span><input id="f_grpc" /></label>
+      </div>
+
+      <div class="section-sep">TLS / 安全</div>
+      <label class="fld inline"><input type="checkbox" id="f_tls" /> <span>启用 TLS</span></label>
+      <div class="form-grid">
+        <label class="fld"><span>SNI / serverName</span><input id="f_sni" /></label>
+        <label class="fld"><span>ALPN</span><input id="f_alpn" placeholder="h2,http/1.1" /></label>
+        <label class="fld"><span>uTLS 指纹</span>
+          <select id="f_fp"><option value="">不使用</option><option>chrome</option><option>firefox</option>
+          <option>safari</option><option>edge</option><option>random</option><option>randomized</option></select>
+        </label>
+        <label class="fld"><span>允许不安全证书</span><input type="checkbox" id="f_insecure" class="sw" /></label>
+      </div>
+      <label class="fld inline"><input type="checkbox" id="f_reality" /> <span>启用 REALITY</span></label>
+      <div class="form-grid">
+        <label class="fld"><span>公钥 publicKey</span><input id="f_pbk" /></label>
+        <label class="fld"><span>shortId</span><input id="f_sid" /></label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="nodeModal">取消</button>
+      <button class="btn primary" id="btnSaveNode">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 规则编辑弹窗 -->
+<div class="modal-mask" id="ruleModal">
+  <div class="modal wide">
+    <div class="modal-head"><b id="ruleModalTitle">添加规则</b><button class="x" data-close="ruleModal">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="fld"><span>备注</span><input id="r_remark" /></label>
+        <label class="fld"><span>动作</span>
+          <select id="r_action"><option value="route">route（转发到出站）</option>
+          <option value="reject">reject（拦截）</option></select>
+        </label>
+        <label class="fld" id="r_outWrap"><span>出站</span>
+          <select id="r_outbound">
+            <option value="proxy">proxy（当前节点/自动）</option>
+            <option value="direct">direct（直连）</option>
+          </select>
+        </label>
+        <label class="fld"><span>规则集</span><input id="r_ruleset" placeholder="多个用逗号分隔，如 geosite-ads" /></label>
+        <label class="fld"><span>域名后缀（每行一个）</span><textarea id="r_dsuffix" rows="3"></textarea></label>
+        <label class="fld"><span>域名关键字</span><textarea id="r_dkeyword" rows="3"></textarea></label>
+        <label class="fld"><span>精确域名</span><textarea id="r_domain" rows="3"></textarea></label>
+        <label class="fld"><span>IP CIDR</span><textarea id="r_ipcidr" rows="3"></textarea></label>
+        <label class="fld"><span>进程名</span><textarea id="r_process" rows="3" placeholder="chrome.exe"></textarea></label>
+        <label class="fld"><span>端口</span><input id="r_port" placeholder="443,8443 或 1000:2000" /></label>
+        <label class="fld"><span>嗅探协议</span><input id="r_protocol" placeholder="tls,http,quic" /></label>
+        <label class="fld"><span>反转匹配</span><input type="checkbox" id="r_invert" class="sw" /></label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="ruleModal">取消</button>
+      <button class="btn primary" id="btnSaveRule">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通用输入弹窗 -->
+<div class="modal-mask" id="promptModal">
+  <div class="modal">
+    <div class="modal-head"><b id="promptTitle">输入</b><button class="x" data-close="promptModal">✕</button></div>
+    <div class="modal-body" id="promptBody"></div>
+    <div class="modal-foot">
+      <button class="btn" data-close="promptModal">取消</button>
+      <button class="btn primary" id="btnPromptOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 配置预览 -->
+<div class="modal-mask" id="configModal">
+  <div class="modal wide">
+    <div class="modal-head"><b>生成的 sing-box 配置</b><button class="x" data-close="configModal">✕</button></div>
+    <div class="modal-body"><pre class="codebox" id="configBox"></pre></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

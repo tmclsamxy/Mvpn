@@ -1,0 +1,38 @@
+[package]
+name = "mvpn"
+version = "0.2.0"
+description = "Mvpn - 轻量代理客户端 (sing-box based)"
+authors = ["Mvpn"]
+edition = "2021"
+rust-version = "1.82"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+# 修复：indexmap 1.9.3 无 default 特性，schemars 只启用 serde-1，
+# 其 build.rs 经 autocfg 探测 sysroot 失败会导致 no_std 变体被编译（E0107）。
+# 显式启用 std 强制走 has_std 分支。
+indexmap = { version = "1.9", features = ["std"] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+reqwest = { version = "0.12", default-features = false, features = [
+    "blocking",
+    "json",
+    "gzip",
+    "native-tls",
+] }
+winreg = "0.52"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+base64 = "0.22"
+urlencoding = "2"
+url = "2"
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 4
+strip = true
